@@ -1,0 +1,6 @@
+.idea
+.vscode
+.vagrant
+k8s-master-disk.vdi
+k8s-worker1-disk.vdi
+k8s-worker2-disk.vdi
