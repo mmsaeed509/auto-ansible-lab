@@ -34,9 +34,11 @@ vagrant up
    
 2. **Test connectivity**:
    ```bash
-   ansible all -m ping
+   cd ~/ansible && ansible all -m ping
    ```
-
+---
+![](./imgs/test.png)
+---
 ### Cleanup
 
 To destroy the lab environment:
