@@ -1,7 +1,6 @@
 # Automated Ansible Lab Setup with Vagrant
 
 > This setup creates a fully automated 3-VM Ansible lab environment using Vagrant and VirtualBox. 
-> Perfect for learning and practicing Ansible automation on both Linux and Windows hosts.
 
 ### VM Specs
 
@@ -26,21 +25,22 @@
 ```bash
 vagrant up
 ```
-
 ### Accessing the Lab
 
 1. **SSH into the manager machine**:
    ```bash
    vagrant ssh ansible-manager
    ```
-
-2. **Navigate to ansible directory**:
-   ```bash
-   cd /home/vagrant/ansible
-   export PATH=$PATH:/home/vagrant/.local/bin
-   ```
-
-3. **Test connectivity**:
+   
+2. **Test connectivity**:
    ```bash
    ansible all -m ping
    ```
+
+### Cleanup
+
+To destroy the lab environment:
+
+```bash
+vagrant destroy -f
+```

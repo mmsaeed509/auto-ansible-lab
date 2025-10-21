@@ -35,26 +35,25 @@ echo -e "${BYellow}[*] Waiting for all VMs to be ready...${RESET_COLOR}"
 sleep 30
 
 # Install Ansible
-echo -e "${BBlue}[*] Installing compatible Ansible version...${RESET_COLOR}"
+echo -e "${BBlue}[*] Installing Ansible...${RESET_COLOR}"
 
 # Remove any existing Ansible installation
 sudo apt remove -y ansible ansible-core 2>/dev/null || true
 
-# Install pip if not present
-if ! command -v pip3 &> /dev/null; then
-    echo -e "${Yellow}   Installing Python pip...${RESET_COLOR}"
-    sudo apt install -y python3-pip
+# Update package list
+sudo apt update
+
+# Install Ansible from Ubuntu repositories (simpler and more reliable)
+echo -e "${Yellow}   Installing Ansible from Ubuntu repositories...${RESET_COLOR}"
+sudo apt install -y ansible
+
+# Verify installation
+if command -v ansible &> /dev/null; then
+    echo -e "${Green}   ✓ Ansible $(ansible --version | head -n1) installed successfully${RESET_COLOR}"
+else
+    echo -e "${Red}   ✗ Ansible installation failed${RESET_COLOR}"
+    exit 1
 fi
-
-# Install compatible Ansible version for Rocky Linux 8
-echo -e "${Yellow}   Installing Ansible 2.14 (compatible with Rocky Linux 8)...${RESET_COLOR}"
-pip3 install --user 'ansible-core<2.15'
-
-# Add to PATH
-echo 'export PATH=$PATH:/home/vagrant/.local/bin' >> /home/vagrant/.bashrc
-export PATH=$PATH:/home/vagrant/.local/bin
-
-echo -e "${Green}   ✓ Ansible installation complete${RESET_COLOR}"
 
 # Setup SSH keys
 echo -e "${BBlue}[*] Setting up SSH key authentication...${RESET_COLOR}"

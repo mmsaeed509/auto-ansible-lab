@@ -46,7 +46,8 @@ Vagrant.configure("2") do |config|
       chmod +x /vagrant/*.sh
     SHELL
     
-    # Don't run setup script yet - will be run manually after all VMs are up
+    # Run Ansible setup script (this will run last due to VM definition order)
+    manager.vm.provision "shell", path: "scripts/ansible-setup.sh", privileged: false
   end
 
   # Ubuntu Host Machine
