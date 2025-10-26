@@ -17,39 +17,6 @@ Vagrant.configure("2") do |config|
   # Sync scripts directory to all VMs
   config.vm.synced_folder "scripts", "/vagrant", type: "virtualbox"
   
-  # Ansible Manager Machine
-  config.vm.define "ansible-manager" do |manager|
-    manager.vm.box = "ubuntu/jammy64"
-    manager.vm.hostname = "ansible-manager"
-    manager.vm.network "private_network", ip: "192.168.56.10"
-    
-    manager.vm.provider "virtualbox" do |vb|
-      vb.name = "ansible-manager"
-      vb.memory = "2048"  # 2GB RAM
-      vb.cpus = 2
-      vb.customize ["modifyvm", :id, "--vram", "16"]
-    end
-    
-    # Basic setup and install dependencies
-    manager.vm.provision "shell", inline: <<-SHELL
-      apt-get update
-      apt-get install -y software-properties-common sshpass python3-pip netcat
-      
-      # Generate SSH key for ansible user
-      sudo -u vagrant ssh-keygen -t rsa -b 2048 -f /home/vagrant/.ssh/id_rsa -N ""
-      
-      # Create ansible directory
-      mkdir -p /home/vagrant/ansible
-      chown vagrant:vagrant /home/vagrant/ansible
-      
-      # Make scripts executable
-      chmod +x /vagrant/*.sh
-    SHELL
-    
-    # Don't run Ansible setup automatically - will be done manually after all VMs are up
-    # manager.vm.provision "shell", path: "scripts/ansible-setup.sh", privileged: false
-  end
-
   # Ubuntu Host Machine
   config.vm.define "ubuntu-host" do |ubuntu|
     ubuntu.vm.box = "ubuntu/jammy64"
@@ -123,5 +90,38 @@ Vagrant.configure("2") do |config|
       # Make scripts executable
       chmod +x /vagrant/*.sh
     SHELL
+  end
+
+  # Ansible Manager Machine (defined last to ensure it provisions after other VMs)
+  config.vm.define "ansible-manager" do |manager|
+    manager.vm.box = "ubuntu/jammy64"
+    manager.vm.hostname = "ansible-manager"
+    manager.vm.network "private_network", ip: "192.168.56.10"
+    
+    manager.vm.provider "virtualbox" do |vb|
+      vb.name = "ansible-manager"
+      vb.memory = "2048"  # 2GB RAM
+      vb.cpus = 2
+      vb.customize ["modifyvm", :id, "--vram", "16"]
+    end
+    
+    # Basic setup and install dependencies
+    manager.vm.provision "shell", inline: <<-SHELL
+      apt-get update
+      apt-get install -y software-properties-common sshpass python3-pip netcat
+      
+      # Generate SSH key for ansible user
+      sudo -u vagrant ssh-keygen -t rsa -b 2048 -f /home/vagrant/.ssh/id_rsa -N ""
+      
+      # Create ansible directory
+      mkdir -p /home/vagrant/ansible
+      chown vagrant:vagrant /home/vagrant/ansible
+      
+      # Make scripts executable
+      chmod +x /vagrant/*.sh
+    SHELL
+    
+    # Run Ansible setup script after all VMs are up (this runs last due to VM definition order)
+    manager.vm.provision "shell", path: "scripts/ansible-setup.sh", privileged: false
   end
 end
