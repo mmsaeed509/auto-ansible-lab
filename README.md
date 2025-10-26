@@ -23,7 +23,7 @@
 ### One-Command Setup
 
 ```bash
-vagrant up
+vagrant up --parallel
 ```
 ### Accessing the Lab
 

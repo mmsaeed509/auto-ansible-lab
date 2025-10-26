@@ -33,7 +33,7 @@ Vagrant.configure("2") do |config|
     # Basic setup and install dependencies
     manager.vm.provision "shell", inline: <<-SHELL
       apt-get update
-      apt-get install -y software-properties-common sshpass python3-pip
+      apt-get install -y software-properties-common sshpass python3-pip netcat
       
       # Generate SSH key for ansible user
       sudo -u vagrant ssh-keygen -t rsa -b 2048 -f /home/vagrant/.ssh/id_rsa -N ""
@@ -46,8 +46,8 @@ Vagrant.configure("2") do |config|
       chmod +x /vagrant/*.sh
     SHELL
     
-    # Run Ansible setup script (this will run last due to VM definition order)
-    manager.vm.provision "shell", path: "scripts/ansible-setup.sh", privileged: false
+    # Don't run Ansible setup automatically - will be done manually after all VMs are up
+    # manager.vm.provision "shell", path: "scripts/ansible-setup.sh", privileged: false
   end
 
   # Ubuntu Host Machine

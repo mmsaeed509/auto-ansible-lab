@@ -32,7 +32,35 @@ echo -e "${RESET_COLOR}"
 
 # Wait for all VMs to be ready
 echo -e "${BYellow}[*] Waiting for all VMs to be ready...${RESET_COLOR}"
-sleep 30
+
+# Function to wait for host to be reachable
+wait_for_host() {
+    local host=$1
+    local max_wait=300  # 5 minutes max wait
+    local wait_time=0
+    
+    echo -e "${Cyan}   Waiting for $host to be reachable...${RESET_COLOR}"
+    
+    while [ $wait_time -lt $max_wait ]; do
+        if ping -c 1 -W 2 $host > /dev/null 2>&1; then
+            # Host is pingable, now check if SSH is ready
+            if nc -z -w 2 $host 22 > /dev/null 2>&1; then
+                echo -e "${Green}   ✓ $host is ready (SSH accessible)${RESET_COLOR}"
+                return 0
+            fi
+        fi
+        sleep 5
+        wait_time=$((wait_time + 5))
+        echo -e "${Yellow}   Still waiting for $host... (${wait_time}s/${max_wait}s)${RESET_COLOR}"
+    done
+    
+    echo -e "${Red}   ✗ Timeout waiting for $host after ${max_wait}s${RESET_COLOR}"
+    return 1
+}
+
+# Wait for both target hosts to be ready
+wait_for_host 192.168.56.11 || { echo -e "${Red}Ubuntu host not ready, continuing anyway...${RESET_COLOR}"; }
+wait_for_host 192.168.56.12 || { echo -e "${Red}Rocky host not ready, continuing anyway...${RESET_COLOR}"; }
 
 # Install Ansible
 echo -e "${BBlue}[*] Installing Ansible...${RESET_COLOR}"
@@ -61,28 +89,43 @@ echo -e "${BBlue}[*] Setting up SSH key authentication...${RESET_COLOR}"
 # Function to copy SSH key with retries
 copy_ssh_key() {
     local host=$1
-    local max_attempts=5
+    local max_attempts=10
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
         echo -e "${Yellow}   Attempt $attempt to copy SSH key to $host${RESET_COLOR}"
-        if sshpass -p 'vagrant' ssh-copy-id -o StrictHostKeyChecking=no -o ConnectTimeout=10 vagrant@$host; then
+        
+        # First verify SSH service is responding
+        if ! nc -z -w 5 $host 22; then
+            echo -e "${Yellow}   SSH service not ready on $host, waiting...${RESET_COLOR}"
+            sleep 15
+            ((attempt++))
+            continue
+        fi
+        
+        # Try to copy the SSH key
+        if timeout 30 sshpass -p 'vagrant' ssh-copy-id -o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ConnectionAttempts=3 vagrant@$host; then
             echo -e "${Green}   ✓ Successfully copied SSH key to $host${RESET_COLOR}"
-            return 0
+            
+            # Verify the key works
+            if timeout 10 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes vagrant@$host 'echo "SSH key test successful"' > /dev/null 2>&1; then
+                echo -e "${Green}   ✓ SSH key authentication verified for $host${RESET_COLOR}"
+                return 0
+            else
+                echo -e "${Yellow}   SSH key copied but authentication test failed, retrying...${RESET_COLOR}"
+            fi
         else
             echo -e "${Red}   ✗ Failed to copy SSH key to $host, attempt $attempt/$max_attempts${RESET_COLOR}"
-            sleep 10
-            ((attempt++))
         fi
+        
+        sleep 15
+        ((attempt++))
     done
     echo -e "${Red}   ✗ Failed to copy SSH key to $host after $max_attempts attempts${RESET_COLOR}"
     return 1
 }
 
-# Test basic connectivity first
-echo -e "${Cyan}   Testing basic VM connectivity...${RESET_COLOR}"
-ping -c 2 192.168.56.11 > /dev/null && echo -e "${Green}   ✓ Ubuntu host reachable${RESET_COLOR}" || echo -e "${Yellow}   ! Ubuntu host not reachable yet${RESET_COLOR}"
-ping -c 2 192.168.56.12 > /dev/null && echo -e "${Green}   ✓ Rocky host reachable${RESET_COLOR}" || echo -e "${Yellow}   ! Rocky host not reachable yet${RESET_COLOR}"
+# Hosts should be ready now, proceeding with SSH key setup
 
 # Copy SSH key to Ubuntu host
 copy_ssh_key 192.168.56.11
